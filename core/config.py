@@ -9,6 +9,7 @@ DEFAULT_PROVIDER = "google"
 DEFAULT_MODEL = "gemini-2.5-flash-image-hd"
 DEFAULT_ASPECT = "1:1"
 DEFAULT_FORMAT = "png"
+DEFAULT_RESOLUTION = "1k"
 DEFAULT_POLL_INTERVAL = 2.0
 DEFAULT_TIMEOUT = 120.0
 
@@ -49,6 +50,7 @@ def get_default_config():
         "model": DEFAULT_MODEL,
         "aspect": DEFAULT_ASPECT,
         "format": DEFAULT_FORMAT,
+        "resolution": DEFAULT_RESOLUTION,
         "poll_interval": DEFAULT_POLL_INTERVAL,
         "timeout": DEFAULT_TIMEOUT,
     }

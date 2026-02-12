@@ -7,6 +7,7 @@ from core.app import (
     DEFAULT_FORMAT,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
+    DEFAULT_RESOLUTION,
     generate_image,
 )
 from core.config import get_api_key, load_config
@@ -19,6 +20,12 @@ def main():
     parser.add_argument("--provider", default=None)
     parser.add_argument("--aspect", default=None)
     parser.add_argument("--format", default=None)
+    parser.add_argument(
+        "--resolution",
+        choices=["1k", "2k", "4k"],
+        default=None,
+        help="Output resolution (square), e.g. 1k, 2k, 4k",
+    )
     parser.add_argument(
         "--image",
         action="append",
@@ -55,6 +62,9 @@ def main():
             model=args.model or config.get("model") or DEFAULT_MODEL,
             aspect=args.aspect or config.get("aspect") or DEFAULT_ASPECT,
             output_format=args.format or config.get("format") or DEFAULT_FORMAT,
+            output_resolution=(
+                args.resolution or config.get("resolution") or DEFAULT_RESOLUTION
+            ),
             output_path=args.out,
             image_urls=images,
             poll_interval=args.poll_interval or config.get("poll_interval") or 2.0,

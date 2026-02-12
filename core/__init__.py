@@ -5,6 +5,7 @@ from .app import (
     DEFAULT_FORMAT,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
+    DEFAULT_RESOLUTION,
     generate_image,
 )
 from .config import (
@@ -19,6 +20,7 @@ __all__ = [
     "DEFAULT_FORMAT",
     "DEFAULT_MODEL",
     "DEFAULT_PROVIDER",
+    "DEFAULT_RESOLUTION",
     "generate_image",
     "get_api_key",
     "get_default_config",

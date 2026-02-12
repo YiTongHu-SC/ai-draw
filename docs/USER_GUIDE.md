@@ -45,7 +45,7 @@ Your settings will be saved and loaded automatically next time.
 ### Generate an Image from Text
 
 1. Enter your prompt in the text box (e.g., "A sunset over mountains")
-2. Choose output format and aspect ratio (optional)
+2. Choose output format, aspect ratio, and resolution (optional)
 3. Click **Generate**
 4. Wait for the image to be created
 5. The result will appear in the preview panel

@@ -7,7 +7,14 @@ import urllib.error
 import urllib.request
 import uuid
 
-from .config import DEFAULT_API_BASE, DEFAULT_ASPECT, DEFAULT_FORMAT, DEFAULT_MODEL, DEFAULT_PROVIDER
+from .config import (
+    DEFAULT_API_BASE,
+    DEFAULT_ASPECT,
+    DEFAULT_FORMAT,
+    DEFAULT_MODEL,
+    DEFAULT_PROVIDER,
+    DEFAULT_RESOLUTION,
+)
 
 TERMINAL_STATUSES = {"succeeded", "failed", "canceled", "completed"}
 SUCCESS_STATUSES = {"succeeded", "completed"}
@@ -96,23 +103,65 @@ def upload_file_0x0(path):
         return url
 
 
-def create_prediction(api_base, api_key, prompt, provider, model, aspect_ratio, output_format):
+def normalize_image_size(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    lower = text.lower()
+    mapping = {
+        "1k": "1K",
+        "2k": "2K",
+        "4k": "4K",
+        "1024": "1K",
+        "2048": "2K",
+        "4096": "4K",
+    }
+    return mapping.get(lower, text)
+
+
+def create_prediction(
+    api_base,
+    api_key,
+    prompt,
+    provider,
+    model,
+    aspect_ratio,
+    output_format,
+    output_resolution=None,
+):
     url = f"{api_base}/{provider}/{model}/text-to-image"
     payload = {
         "prompt": prompt,
         "aspect_ratio": aspect_ratio,
         "output_format": output_format,
     }
+    image_size = normalize_image_size(output_resolution)
+    if image_size:
+        payload["image_size"] = image_size
     return request_json("POST", url, api_key, payload=payload)
 
 
-def create_edit_prediction(api_base, api_key, prompt, provider, model, images, output_format):
+def create_edit_prediction(
+    api_base,
+    api_key,
+    prompt,
+    provider,
+    model,
+    images,
+    output_format,
+    output_resolution=None,
+):
     url = f"{api_base}/{provider}/{model}/image-edit"
     payload = {
         "prompt": prompt,
         "images": images,
         "output_format": output_format,
     }
+    image_size = normalize_image_size(output_resolution)
+    if image_size:
+        payload["image_size"] = image_size
     return request_json("POST", url, api_key, payload=payload)
 
 
@@ -154,6 +203,7 @@ def generate_image(
     model=DEFAULT_MODEL,
     aspect=DEFAULT_ASPECT,
     output_format=DEFAULT_FORMAT,
+    output_resolution=DEFAULT_RESOLUTION,
     output_path="output.png",
     image_path="",
     image_urls=None,
@@ -197,6 +247,7 @@ def generate_image(
                 model,
                 resolved_images,
                 output_format,
+                output_resolution,
             )
         else:
             create_resp = create_prediction(
@@ -207,6 +258,7 @@ def generate_image(
                 model,
                 aspect,
                 output_format,
+                output_resolution,
             )
         create_data = extract_data(create_resp)
         get_url = (create_data.get("urls") or {}).get("get")

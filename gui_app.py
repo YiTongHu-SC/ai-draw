@@ -9,6 +9,7 @@ from core.app import (
     DEFAULT_FORMAT,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
+    DEFAULT_RESOLUTION,
     generate_image,
 )
 from core.config import get_api_key, load_config, save_config
@@ -26,6 +27,7 @@ class GenerateWorker(QtCore.QThread):
         model,
         aspect,
         output_format,
+        output_resolution,
         output_path,
         image_path,
         poll_interval,
@@ -39,6 +41,7 @@ class GenerateWorker(QtCore.QThread):
         self.model = model
         self.aspect = aspect
         self.output_format = output_format
+        self.output_resolution = output_resolution
         self.output_path = output_path
         self.image_path = image_path
         self.poll_interval = poll_interval
@@ -58,6 +61,7 @@ class GenerateWorker(QtCore.QThread):
                 model=self.model,
                 aspect=self.aspect,
                 output_format=self.output_format,
+                output_resolution=self.output_resolution,
                 output_path=self.output_path,
                 image_path=self.image_path,
                 poll_interval=self.poll_interval,
@@ -182,6 +186,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.format_box.addItems(["png", "jpg", "webp"])
         self.format_box.setCurrentText(self.config.get("format", DEFAULT_FORMAT))
 
+        self.resolution_box = QtWidgets.QComboBox()
+        self.resolution_box.addItems(["1k", "2k", "4k"])
+        self.resolution_box.setCurrentText(
+            str(self.config.get("resolution", DEFAULT_RESOLUTION))
+        )
+
         grid = QtWidgets.QGridLayout()
         grid.addWidget(QtWidgets.QLabel("Model"), 0, 0)
         grid.addWidget(self.model_box, 0, 1)
@@ -189,8 +199,10 @@ class MainWindow(QtWidgets.QMainWindow):
         grid.addWidget(self.provider_input, 1, 1)
         grid.addWidget(QtWidgets.QLabel("Aspect"), 2, 0)
         grid.addWidget(self.aspect_box, 2, 1)
-        grid.addWidget(QtWidgets.QLabel("Format"), 3, 0)
-        grid.addWidget(self.format_box, 3, 1)
+        grid.addWidget(QtWidgets.QLabel("Resolution"), 3, 0)
+        grid.addWidget(self.resolution_box, 3, 1)
+        grid.addWidget(QtWidgets.QLabel("Format"), 4, 0)
+        grid.addWidget(self.format_box, 4, 1)
         left_layout.addLayout(grid)
 
         self.output_path = QtWidgets.QLineEdit("./output/output.png")
@@ -241,6 +253,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.provider_input.setText(self.config.get("provider", DEFAULT_PROVIDER))
             self.model_box.setCurrentText(self.config.get("model", DEFAULT_MODEL))
             self.aspect_box.setCurrentText(self.config.get("aspect", DEFAULT_ASPECT))
+            self.resolution_box.setCurrentText(
+                str(self.config.get("resolution", DEFAULT_RESOLUTION))
+            )
             self.format_box.setCurrentText(self.config.get("format", DEFAULT_FORMAT))
 
     def pick_image(self):
@@ -272,6 +287,10 @@ class MainWindow(QtWidgets.QMainWindow):
             model=self.model_box.currentText().strip() or self.config.get("model", DEFAULT_MODEL),
             aspect=self.aspect_box.currentText().strip() or self.config.get("aspect", DEFAULT_ASPECT),
             output_format=self.format_box.currentText().strip() or self.config.get("format", DEFAULT_FORMAT),
+            output_resolution=(
+                self.resolution_box.currentText().strip()
+                or self.config.get("resolution", DEFAULT_RESOLUTION)
+            ),
             output_path=self.output_path.text().strip() or "./output/output.png",
             image_path=self.image_path.text().strip(),
             poll_interval=self.config.get("poll_interval", 2.0),
@@ -304,6 +323,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log_view.appendPlainText(f"saved: {output_path}")
         pixmap = QtGui.QPixmap(output_path)
         if not pixmap.isNull():
+            requested = (
+                self.resolution_box.currentText().strip()
+                or self.config.get("resolution", DEFAULT_RESOLUTION)
+            )
+            expected = {
+                "1k": 1024,
+                "2k": 2048,
+                "4k": 4096,
+            }.get(str(requested).lower())
+            if expected:
+                size = pixmap.size()
+                if size.width() != expected or size.height() != expected:
+                    self.log_view.appendPlainText(
+                        f"warning: requested {requested} but got {size.width()}x{size.height()}"
+                    )
             self.preview.setPixmap(
                 pixmap.scaled(
                     self.preview.size(),

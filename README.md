@@ -70,6 +70,7 @@ pipenv run python main.py "A neon city at night" \
   --model gemini-2.5-flash-image-hd \
   --aspect 1:1 \
   --format png \
+  --resolution 2k \
   --out output.png \
   --poll-interval 2 \
   --timeout 120 \
@@ -96,6 +97,7 @@ Settings are saved to `~/.ai-draw/config.json`:
   "model": "gemini-2.5-flash-image-hd",
   "aspect": "1:1",
   "format": "png",
+  "resolution": "1k",
   "poll_interval": 2.0,
   "timeout": 120.0
 }
