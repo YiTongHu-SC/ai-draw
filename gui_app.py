@@ -11,6 +11,7 @@ from core.app import (
     DEFAULT_PROVIDER,
     generate_image,
 )
+from core.config import get_api_key, load_config, save_config
 
 
 class GenerateWorker(QtCore.QThread):
@@ -29,6 +30,7 @@ class GenerateWorker(QtCore.QThread):
         image_path,
         poll_interval,
         timeout,
+        api_base,
         api_key,
     ):
         super().__init__()
@@ -41,6 +43,7 @@ class GenerateWorker(QtCore.QThread):
         self.image_path = image_path
         self.poll_interval = poll_interval
         self.timeout = timeout
+        self.api_base = api_base
         self.api_key = api_key
         self.cancel_event = Event()
 
@@ -59,6 +62,7 @@ class GenerateWorker(QtCore.QThread):
                 image_path=self.image_path,
                 poll_interval=self.poll_interval,
                 timeout=self.timeout,
+                api_base=self.api_base,
                 api_key=self.api_key,
                 on_status=lambda s: self.status.emit(s),
                 cancel_event=self.cancel_event,
@@ -68,13 +72,65 @@ class GenerateWorker(QtCore.QThread):
             self.error.emit(str(exc))
 
 
+class SettingsDialog(QtWidgets.QDialog):
+    def __init__(self, config, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.setMinimumWidth(500)
+        self.config = dict(config)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        form = QtWidgets.QFormLayout()
+        form.setSpacing(8)
+
+        self.api_base_input = QtWidgets.QLineEdit(self.config.get("api_base", ""))
+        self.api_key_input = QtWidgets.QLineEdit(self.config.get("api_key", ""))
+        self.api_key_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        self.poll_interval_input = QtWidgets.QDoubleSpinBox()
+        self.poll_interval_input.setRange(0.5, 10.0)
+        self.poll_interval_input.setValue(self.config.get("poll_interval", 2.0))
+        self.timeout_input = QtWidgets.QDoubleSpinBox()
+        self.timeout_input.setRange(10.0, 600.0)
+        self.timeout_input.setValue(self.config.get("timeout", 120.0))
+
+        form.addRow("API Base URL:", self.api_base_input)
+        form.addRow("API Key:", self.api_key_input)
+        form.addRow("Poll Interval (s):", self.poll_interval_input)
+        form.addRow("Timeout (s):", self.timeout_input)
+
+        layout.addLayout(form)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Save
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_config(self):
+        self.config["api_base"] = self.api_base_input.text().strip()
+        self.config["api_key"] = self.api_key_input.text().strip()
+        self.config["poll_interval"] = self.poll_interval_input.value()
+        self.config["timeout"] = self.timeout_input.value()
+        return self.config
+
+
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ai-draw")
         self.setMinimumSize(900, 600)
 
+        self.config = load_config()
         self.worker = None
+
+        menubar = self.menuBar()
+        settings_menu = menubar.addMenu("Settings")
+        settings_action = settings_menu.addAction("Preferences")
+        settings_action.triggered.connect(self.open_settings)
 
         root = QtWidgets.QWidget()
         self.setCentralWidget(root)
@@ -111,17 +167,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 "gemini-3-pro-image-preview",
             ]
         )
-        self.model_box.setCurrentText(DEFAULT_MODEL)
+        self.model_box.setCurrentText(self.config.get("model", DEFAULT_MODEL))
 
-        self.provider_input = QtWidgets.QLineEdit(DEFAULT_PROVIDER)
+        self.provider_input = QtWidgets.QLineEdit(self.config.get("provider", DEFAULT_PROVIDER))
 
         self.aspect_box = QtWidgets.QComboBox()
         self.aspect_box.addItems(["1:1", "16:9", "9:16", "4:3", "3:4"])
-        self.aspect_box.setCurrentText(DEFAULT_ASPECT)
+        self.aspect_box.setCurrentText(self.config.get("aspect", DEFAULT_ASPECT))
 
         self.format_box = QtWidgets.QComboBox()
         self.format_box.addItems(["png", "jpg", "webp"])
-        self.format_box.setCurrentText(DEFAULT_FORMAT)
+        self.format_box.setCurrentText(self.config.get("format", DEFAULT_FORMAT))
 
         grid = QtWidgets.QGridLayout()
         grid.addWidget(QtWidgets.QLabel("Model"), 0, 0)
@@ -174,6 +230,16 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(left, 2)
         layout.addWidget(right, 3)
 
+    def open_settings(self):
+        dialog = SettingsDialog(self.config, self)
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            self.config = dialog.get_config()
+            save_config(self.config)
+            self.provider_input.setText(self.config.get("provider", DEFAULT_PROVIDER))
+            self.model_box.setCurrentText(self.config.get("model", DEFAULT_MODEL))
+            self.aspect_box.setCurrentText(self.config.get("aspect", DEFAULT_ASPECT))
+            self.format_box.setCurrentText(self.config.get("format", DEFAULT_FORMAT))
+
     def pick_image(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, "Select image", "", "Images (*.png *.jpg *.jpeg *.webp)"
@@ -196,17 +262,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.generate_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
 
-        api_key = os.getenv("GPTSAPI_API_KEY")
+        api_key = get_api_key(self.config)
         self.worker = GenerateWorker(
             prompt=self.prompt_input.toPlainText(),
-            provider=self.provider_input.text().strip() or DEFAULT_PROVIDER,
-            model=self.model_box.currentText().strip() or DEFAULT_MODEL,
-            aspect=self.aspect_box.currentText().strip() or DEFAULT_ASPECT,
-            output_format=self.format_box.currentText().strip() or DEFAULT_FORMAT,
+            provider=self.provider_input.text().strip() or self.config.get("provider", DEFAULT_PROVIDER),
+            model=self.model_box.currentText().strip() or self.config.get("model", DEFAULT_MODEL),
+            aspect=self.aspect_box.currentText().strip() or self.config.get("aspect", DEFAULT_ASPECT),
+            output_format=self.format_box.currentText().strip() or self.config.get("format", DEFAULT_FORMAT),
             output_path=self.output_path.text().strip() or "./output/output.png",
             image_path=self.image_path.text().strip(),
-            poll_interval=2.0,
-            timeout=120.0,
+            poll_interval=self.config.get("poll_interval", 2.0),
+            timeout=self.config.get("timeout", 120.0),
+            api_base=self.config.get("api_base"),
             api_key=api_key,
         )
         self.worker.status.connect(self.on_status)

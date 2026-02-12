@@ -7,12 +7,8 @@ import urllib.error
 import urllib.request
 import uuid
 
+from .config import DEFAULT_API_BASE, DEFAULT_ASPECT, DEFAULT_FORMAT, DEFAULT_MODEL, DEFAULT_PROVIDER
 
-API_BASE = "https://api.gptsapi.net/api/v3"
-DEFAULT_PROVIDER = "google"
-DEFAULT_MODEL = "gemini-2.5-flash-image-hd"
-DEFAULT_ASPECT = "1:1"
-DEFAULT_FORMAT = "png"
 TERMINAL_STATUSES = {"succeeded", "failed", "canceled", "completed"}
 SUCCESS_STATUSES = {"succeeded", "completed"}
 
@@ -100,8 +96,8 @@ def upload_file_0x0(path):
         return url
 
 
-def create_prediction(api_key, prompt, provider, model, aspect_ratio, output_format):
-    url = f"{API_BASE}/{provider}/{model}/text-to-image"
+def create_prediction(api_base, api_key, prompt, provider, model, aspect_ratio, output_format):
+    url = f"{api_base}/{provider}/{model}/text-to-image"
     payload = {
         "prompt": prompt,
         "aspect_ratio": aspect_ratio,
@@ -110,8 +106,8 @@ def create_prediction(api_key, prompt, provider, model, aspect_ratio, output_for
     return request_json("POST", url, api_key, payload=payload)
 
 
-def create_edit_prediction(api_key, prompt, provider, model, images, output_format):
-    url = f"{API_BASE}/{provider}/{model}/image-edit"
+def create_edit_prediction(api_base, api_key, prompt, provider, model, images, output_format):
+    url = f"{api_base}/{provider}/{model}/image-edit"
     payload = {
         "prompt": prompt,
         "images": images,
@@ -163,10 +159,13 @@ def generate_image(
     image_urls=None,
     poll_interval=2.0,
     timeout=120.0,
+    api_base=None,
     api_key=None,
     on_status=None,
     cancel_event=None,
 ):
+    if not api_base:
+        api_base = DEFAULT_API_BASE
     if not api_key:
         api_key = os.getenv("GPTSAPI_API_KEY")
     if not api_key:
@@ -191,6 +190,7 @@ def generate_image(
             on_status("submitting request")
         if use_image_edit:
             create_resp = create_edit_prediction(
+                api_base,
                 api_key,
                 prompt,
                 provider,
@@ -200,6 +200,7 @@ def generate_image(
             )
         else:
             create_resp = create_prediction(
+                api_base,
                 api_key,
                 prompt,
                 provider,
