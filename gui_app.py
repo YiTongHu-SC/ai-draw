@@ -122,6 +122,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ai-draw")
+        icon_path = os.path.join(os.path.dirname(__file__), "img", "icon.png")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QtGui.QIcon(icon_path))
         self.setMinimumSize(900, 600)
 
         self.config = load_config()
@@ -469,6 +472,9 @@ def apply_style(app):
 
 def main():
     app = QtWidgets.QApplication([])
+    icon_path = os.path.join(os.path.dirname(__file__), "img", "icon.png")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QtGui.QIcon(icon_path))
     apply_style(app)
     window = MainWindow()
     window.show()
