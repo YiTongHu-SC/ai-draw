@@ -41,6 +41,11 @@ htmlcov/
 # Logs
 *.log
 
+# Build and distribution
+build/
+dist/
+*.spec.bak
+
 #output
 output/
 prompt_img/

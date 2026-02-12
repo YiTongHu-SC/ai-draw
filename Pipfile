@@ -7,6 +7,7 @@ name = "pypi"
 PySide6 = "*"
 
 [dev-packages]
+pyinstaller = "*"
 
 [requires]
 python_version = "3.12"
