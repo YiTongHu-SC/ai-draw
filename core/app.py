@@ -235,8 +235,6 @@ def generate_image(
         image_bytes = base64.b64decode(inline_data)
         with open(output_path, "wb") as f:
             f.write(image_bytes)
-        if on_status:
-            on_status(f"saved: {output_path}")
         return output_path
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8")
