@@ -75,6 +75,16 @@ def create_prediction(api_key, prompt, provider, model, aspect_ratio, output_for
     return request_json("POST", url, api_key, payload=payload)
 
 
+def create_edit_prediction(api_key, prompt, provider, model, images, output_format):
+    url = f"{API_BASE}/{provider}/{model}/image-edit"
+    payload = {
+        "prompt": prompt,
+        "images": images,
+        "output_format": output_format,
+    }
+    return request_json("POST", url, api_key, payload=payload)
+
+
 def poll_prediction(api_key, get_url, poll_interval, timeout_seconds):
     start = time.monotonic()
     while True:
@@ -89,17 +99,33 @@ def poll_prediction(api_key, get_url, poll_interval, timeout_seconds):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Hello world text-to-image demo")
+    parser = argparse.ArgumentParser(description="Text-to-image and image-edit demo")
     parser.add_argument("prompt", help="Text prompt for image generation")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--provider", default=DEFAULT_PROVIDER)
     parser.add_argument("--aspect", default=DEFAULT_ASPECT)
     parser.add_argument("--format", default=DEFAULT_FORMAT)
+    parser.add_argument(
+        "--image",
+        action="append",
+        default=[],
+        help="Image URL for image-edit (repeatable)",
+    )
+    parser.add_argument(
+        "--images",
+        default="",
+        help="Comma-separated image URLs for image-edit",
+    )
     parser.add_argument("--out", default="output.png")
     parser.add_argument("--poll-interval", type=float, default=2.0)
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    images = list(args.image)
+    if args.images:
+        images.extend([item.strip() for item in args.images.split(",") if item.strip()])
+    use_image_edit = len(images) > 0
 
     api_key = os.getenv("GPTSAPI_API_KEY")
     if not api_key:
@@ -108,14 +134,24 @@ def main():
     try:
         if args.verbose:
             print("Submitting request...")
-        create_resp = create_prediction(
-            api_key,
-            args.prompt,
-            args.provider,
-            args.model,
-            args.aspect,
-            args.format,
-        )
+        if use_image_edit:
+            create_resp = create_edit_prediction(
+                api_key,
+                args.prompt,
+                args.provider,
+                args.model,
+                images,
+                args.format,
+            )
+        else:
+            create_resp = create_prediction(
+                api_key,
+                args.prompt,
+                args.provider,
+                args.model,
+                args.aspect,
+                args.format,
+            )
         create_data = extract_data(create_resp)
         get_url = (create_data.get("urls") or {}).get("get")
         if not get_url:

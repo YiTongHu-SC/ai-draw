@@ -34,6 +34,32 @@ pipenv run python main.py "A neon city at night" \
   --verbose
 ```
 
+## curl request
+
+``` bash
+## banana pro
+curl --location --request POST 'https://api.gptsapi.net/api/v3/google/gemini-3-pro-image-preview/text-to-image' \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "prompt": "生成一张火烧云图片",
+    "aspect_ratio": "1:1",
+    "output_format": "png"
+  }'
+```
+
+``` bash
+## banana
+curl --location --request POST 'https://api.gptsapi.net/api/v3/google/gemini-2.5-flash-image-hd/text-to-image' \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "prompt": "生成一张火烧云图片",
+    "aspect_ratio": "1:1",
+    "output_format": "png"
+  }'
+```
+
 ## Notes
 
 - The script first creates a prediction, then polls the provided URL until the image is ready.
