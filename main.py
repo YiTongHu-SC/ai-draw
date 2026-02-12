@@ -5,6 +5,8 @@ import os
 import time
 import urllib.error
 import urllib.request
+import mimetypes
+import uuid
 
 
 API_BASE = "https://api.gptsapi.net/api/v3"
@@ -63,6 +65,40 @@ def download_file(url, path, api_key):
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=60) as resp, open(path, "wb") as f:
         f.write(resp.read())
+
+
+def is_url(value):
+    return value.startswith("http://") or value.startswith("https://")
+
+
+def upload_file_0x0(path):
+    boundary = f"----ai-draw-{uuid.uuid4().hex}"
+    filename = os.path.basename(path)
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    with open(path, "rb") as f:
+        file_bytes = f.read()
+    preamble = (
+        f"--{boundary}\r\n"
+        f"Content-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\n"
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8")
+    closing = f"\r\n--{boundary}--\r\n".encode("utf-8")
+    body = preamble + file_bytes + closing
+    req = urllib.request.Request(
+        "https://0x0.st",
+        data=body,
+        headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "User-Agent": "ai-draw/1.0",
+            "Accept": "text/plain",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        url = resp.read().decode("utf-8").strip()
+        if not is_url(url):
+            raise RuntimeError(f"Unexpected upload response: {url}")
+        return url
 
 
 def create_prediction(api_key, prompt, provider, model, aspect_ratio, output_format):
@@ -125,7 +161,17 @@ def main():
     images = list(args.image)
     if args.images:
         images.extend([item.strip() for item in args.images.split(",") if item.strip()])
-    use_image_edit = len(images) > 0
+    resolved_images = []
+    for item in images:
+        if is_url(item):
+            resolved_images.append(item)
+        elif os.path.isfile(item):
+            if args.verbose:
+                print(f"Uploading: {item}")
+            resolved_images.append(upload_file_0x0(item))
+        else:
+            raise SystemExit(f"Image not found or invalid: {item}")
+    use_image_edit = len(resolved_images) > 0
 
     api_key = os.getenv("GPTSAPI_API_KEY")
     if not api_key:
@@ -140,7 +186,7 @@ def main():
                 args.prompt,
                 args.provider,
                 args.model,
-                images,
+                resolved_images,
                 args.format,
             )
         else:
