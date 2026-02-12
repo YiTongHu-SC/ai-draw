@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 PySide6 = "*"
+google-genai = "*"
 
 [dev-packages]
 pyinstaller = "*"

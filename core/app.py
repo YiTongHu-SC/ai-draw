@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
+import base64
 import json
 import mimetypes
 import os
-import time
 import urllib.error
 import urllib.request
-import uuid
 
 from .config import (
     DEFAULT_API_BASE,
@@ -16,11 +15,7 @@ from .config import (
     DEFAULT_RESOLUTION,
 )
 
-TERMINAL_STATUSES = {"succeeded", "failed", "canceled", "completed"}
-SUCCESS_STATUSES = {"succeeded", "completed"}
-
-
-def request_json(method, url, api_key, payload=None):
+def request_json(method, url, api_key, payload=None, timeout=30):
     data_bytes = None
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -32,75 +27,46 @@ def request_json(method, url, api_key, payload=None):
         headers["Content-Type"] = "application/json"
 
     req = urllib.request.Request(url, data=data_bytes, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         body = resp.read().decode("utf-8")
         return json.loads(body)
 
 
-def extract_data(response):
-    return response.get("data", response)
-
-
-def extract_image_urls(data):
-    outputs = data.get("outputs") or data.get("output") or []
-    urls = []
-    if isinstance(outputs, list):
-        for item in outputs:
-            if isinstance(item, str):
-                urls.append(item)
-            elif isinstance(item, dict):
-                url = item.get("url") or item.get("image")
-                if url:
-                    urls.append(url)
-    elif isinstance(outputs, str):
-        urls.append(outputs)
-    return urls
-
-
-def download_file(url, path, api_key):
-    headers = {
-        "User-Agent": "ai-draw/1.0",
-        "Accept": "*/*",
-    }
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    req = urllib.request.Request(url, headers=headers, method="GET")
-    with urllib.request.urlopen(req, timeout=60) as resp, open(path, "wb") as f:
-        f.write(resp.read())
+def extract_inline_image_data(response):
+    if "error" in response:
+        error = response.get("error") or {}
+        message = error.get("message") or str(error)
+        raise RuntimeError(message)
+    candidates = response.get("candidates") or []
+    for candidate in candidates:
+        content = candidate.get("content") or {}
+        parts = content.get("parts") or []
+        for part in parts:
+            inline = part.get("inlineData") or part.get("inline_data")
+            if inline and inline.get("data"):
+                return inline.get("data")
+    return None
 
 
 def is_url(value):
     return value.startswith("http://") or value.startswith("https://")
 
 
-def upload_file_0x0(path):
-    boundary = f"----ai-draw-{uuid.uuid4().hex}"
-    filename = os.path.basename(path)
-    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    with open(path, "rb") as f:
-        file_bytes = f.read()
-    preamble = (
-        f"--{boundary}\r\n"
-        f"Content-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\n"
-        f"Content-Type: {content_type}\r\n\r\n"
-    ).encode("utf-8")
-    closing = f"\r\n--{boundary}--\r\n".encode("utf-8")
-    body = preamble + file_bytes + closing
-    req = urllib.request.Request(
-        "https://0x0.st",
-        data=body,
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
+def load_image_bytes(image_item):
+    if is_url(image_item):
+        headers = {
             "User-Agent": "ai-draw/1.0",
-            "Accept": "text/plain",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        url = resp.read().decode("utf-8").strip()
-        if not is_url(url):
-            raise RuntimeError(f"Unexpected upload response: {url}")
-        return url
+            "Accept": "*/*",
+        }
+        req = urllib.request.Request(image_item, headers=headers, method="GET")
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = resp.read()
+        mime_type = mimetypes.guess_type(image_item)[0] or "application/octet-stream"
+        return data, mime_type
+    with open(image_item, "rb") as f:
+        data = f.read()
+    mime_type = mimetypes.guess_type(image_item)[0] or "application/octet-stream"
+    return data, mime_type
 
 
 def normalize_image_size(value):
@@ -125,75 +91,76 @@ def create_prediction(
     api_base,
     api_key,
     prompt,
-    provider,
     model,
     aspect_ratio,
-    output_format,
     output_resolution=None,
+    timeout=120.0,
 ):
-    url = f"{api_base}/{provider}/{model}/text-to-image"
-    payload = {
-        "prompt": prompt,
-        "aspect_ratio": aspect_ratio,
-        "output_format": output_format,
-    }
+    url = f"{api_base}/models/{model}:generateContent"
     image_size = normalize_image_size(output_resolution)
+    image_config = {}
+    if aspect_ratio:
+        image_config["aspectRatio"] = aspect_ratio
     if image_size:
-        payload["image_size"] = image_size
-    return request_json("POST", url, api_key, payload=payload)
+        image_config["imageSize"] = image_size
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+            "imageConfig": image_config,
+        },
+    }
+    return request_json("POST", url, api_key, payload=payload, timeout=timeout)
 
 
 def create_edit_prediction(
     api_base,
     api_key,
     prompt,
-    provider,
     model,
-    images,
-    output_format,
+    image_parts,
+    aspect_ratio,
     output_resolution=None,
+    timeout=120.0,
 ):
-    url = f"{api_base}/{provider}/{model}/image-edit"
-    payload = {
-        "prompt": prompt,
-        "images": images,
-        "output_format": output_format,
-    }
+    url = f"{api_base}/models/{model}:generateContent"
     image_size = normalize_image_size(output_resolution)
+    image_config = {}
+    if aspect_ratio:
+        image_config["aspectRatio"] = aspect_ratio
     if image_size:
-        payload["image_size"] = image_size
-    return request_json("POST", url, api_key, payload=payload)
+        image_config["imageSize"] = image_size
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}, *image_parts],
+            }
+        ],
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+            "imageConfig": image_config,
+        },
+    }
+    return request_json("POST", url, api_key, payload=payload, timeout=timeout)
 
 
-def poll_prediction(api_key, get_url, poll_interval, timeout_seconds, cancel_event, on_status):
-    start = time.monotonic()
-    while True:
-        if cancel_event is not None and cancel_event.is_set():
-            raise RuntimeError("Canceled")
-        response = request_json("GET", get_url, api_key)
-        data = extract_data(response)
-        status = str(data.get("status", "")).lower()
-        if on_status:
-            on_status(status or "unknown")
-        if status in TERMINAL_STATUSES:
-            return response
-        if time.monotonic() - start >= timeout_seconds:
-            raise TimeoutError("Timed out waiting for the image to be ready.")
-        time.sleep(poll_interval)
-
-
-def resolve_images(image_items, on_status):
-    resolved = []
+def build_image_parts(image_items, on_status):
+    parts = []
     for item in image_items:
-        if is_url(item):
-            resolved.append(item)
-        elif os.path.isfile(item):
-            if on_status:
-                on_status("uploading image")
-            resolved.append(upload_file_0x0(item))
-        else:
+        if not (is_url(item) or os.path.isfile(item)):
             raise RuntimeError(f"Image not found or invalid: {item}")
-    return resolved
+        if on_status:
+            on_status("loading image")
+        data, mime_type = load_image_bytes(item)
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": mime_type,
+                    "data": base64.b64encode(data).decode("ascii"),
+                }
+            }
+        )
+    return parts
 
 
 def generate_image(
@@ -234,8 +201,8 @@ def generate_image(
         image_items.extend(image_urls)
 
     try:
-        resolved_images = resolve_images(image_items, on_status)
-        use_image_edit = len(resolved_images) > 0
+        image_parts = build_image_parts(image_items, on_status)
+        use_image_edit = len(image_parts) > 0
         if on_status:
             on_status("submitting request")
         if use_image_edit:
@@ -243,49 +210,31 @@ def generate_image(
                 api_base,
                 api_key,
                 prompt,
-                provider,
                 model,
-                resolved_images,
-                output_format,
+                image_parts,
+                aspect,
                 output_resolution,
+                timeout,
             )
         else:
             create_resp = create_prediction(
                 api_base,
                 api_key,
                 prompt,
-                provider,
                 model,
                 aspect,
-                output_format,
                 output_resolution,
+                timeout,
             )
-        create_data = extract_data(create_resp)
-        get_url = (create_data.get("urls") or {}).get("get")
-        if not get_url:
-            raise RuntimeError("Missing polling URL in response")
+        inline_data = extract_inline_image_data(create_resp)
+        if not inline_data:
+            raise RuntimeError("No image data found in response")
 
         if on_status:
-            on_status("polling")
-        final_resp = poll_prediction(
-            api_key,
-            get_url,
-            poll_interval,
-            timeout,
-            cancel_event,
-            on_status,
-        )
-        final_data = extract_data(final_resp)
-        urls = extract_image_urls(final_data)
-        if not urls:
-            status = str(final_data.get("status", "")).lower()
-            if status in SUCCESS_STATUSES:
-                raise RuntimeError("Image completed but no URLs found in response")
-            raise RuntimeError("No image URLs found in response")
-
-        if on_status:
-            on_status("downloading")
-        download_file(urls[0], output_path, api_key)
+            on_status("saving")
+        image_bytes = base64.b64decode(inline_data)
+        with open(output_path, "wb") as f:
+            f.write(image_bytes)
         if on_status:
             on_status(f"saved: {output_path}")
         return output_path

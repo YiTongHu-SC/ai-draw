@@ -78,7 +78,7 @@ pipenv run python main.py "A neon city at night" \
 
 # Override API settings
 pipenv run python main.py "test" \
-  --api-base https://custom-api.example.com/api/v3 \
+  --api-base https://custom-api.example.com/v1beta \
   --api-key YOUR_API_KEY \
   --out test.png
 ```
@@ -91,7 +91,7 @@ Settings are saved to `~/.ai-draw/config.json`:
 
 ```json
 {
-  "api_base": "https://api.gptsapi.net/api/v3",
+  "api_base": "https://api.apiyi.com/v1beta",
   "api_key": "your_api_key",
   "provider": "google",
   "model": "gemini-2.5-flash-image-hd",

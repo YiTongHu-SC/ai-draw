@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 
-DEFAULT_API_BASE = "https://api.gptsapi.net/api/v3"
+DEFAULT_API_BASE = "https://api.apiyi.com/v1beta"
 DEFAULT_PROVIDER = "google"
 DEFAULT_MODEL = "gemini-2.5-flash-image-hd"
 DEFAULT_ASPECT = "1:1"
