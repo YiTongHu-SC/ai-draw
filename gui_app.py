@@ -314,13 +314,157 @@ class MainWindow(QtWidgets.QMainWindow):
 
 def apply_style(app):
     app.setStyle("Fusion")
-    app.setStyleSheet(
-        "QWidget { background: #0f1115; color: #e5e7eb; }"
-        "QLineEdit, QPlainTextEdit, QComboBox { background: #161a22; border: 1px solid #272b36; border-radius: 6px; padding: 6px; }"
-        "QPushButton { background: #2d6cdf; border: none; padding: 8px 14px; border-radius: 6px; }"
-        "QPushButton:disabled { background: #364152; }"
-        "QLabel { font-size: 12px; }"
-    )
+    app.setStyleSheet("""
+        QWidget {
+            background: #0f1115;
+            color: #e5e7eb;
+            font-size: 13px;
+        }
+        
+        QLineEdit, QPlainTextEdit, QComboBox {
+            background: #161a22;
+            border: 1px solid #272b36;
+            border-radius: 6px;
+            padding: 6px;
+            color: #e5e7eb;
+        }
+        
+        QLineEdit:focus, QPlainTextEdit:focus, QComboBox:focus {
+            border: 1px solid #3b82f6;
+        }
+        
+        QComboBox::drop-down {
+            border: none;
+            padding-right: 8px;
+        }
+        
+        QComboBox::down-arrow {
+            image: none;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 6px solid #6b7280;
+            margin-right: 6px;
+        }
+        
+        QPushButton {
+            background: #2d6cdf;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        QPushButton:hover {
+            background: #3b82f6;
+        }
+        
+        QPushButton:pressed {
+            background: #1e40af;
+        }
+        
+        QPushButton:disabled {
+            background: #364152;
+            color: #6b7280;
+        }
+        
+        QLabel {
+            font-size: 12px;
+            background: transparent;
+        }
+        
+        /* Menu bar styling */
+        QMenuBar {
+            background: #161a22;
+            border-bottom: 1px solid #272b36;
+            padding: 4px;
+        }
+        
+        QMenuBar::item {
+            background: transparent;
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+        
+        QMenuBar::item:selected {
+            background: #1e293b;
+        }
+        
+        QMenuBar::item:pressed {
+            background: #2d6cdf;
+        }
+        
+        /* Menu dropdown styling */
+        QMenu {
+            background: #161a22;
+            border: 1px solid #272b36;
+            border-radius: 6px;
+            padding: 6px;
+        }
+        
+        QMenu::item {
+            padding: 8px 24px;
+            border-radius: 4px;
+        }
+        
+        QMenu::item:selected {
+            background: #2d6cdf;
+            color: #ffffff;
+        }
+        
+        /* Dialog styling */
+        QDialog {
+            background: #0f1115;
+        }
+        
+        QDialogButtonBox QPushButton {
+            min-width: 80px;
+        }
+        
+        /* Spin box styling */
+        QDoubleSpinBox {
+            background: #161a22;
+            border: 1px solid #272b36;
+            border-radius: 6px;
+            padding: 6px;
+            color: #e5e7eb;
+        }
+        
+        QDoubleSpinBox:focus {
+            border: 1px solid #3b82f6;
+        }
+        
+        QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+            background: #1e293b;
+            border: none;
+            border-radius: 3px;
+            width: 16px;
+        }
+        
+        QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover {
+            background: #2d6cdf;
+        }
+        
+        /* Scrollbar styling */
+        QScrollBar:vertical {
+            background: #161a22;
+            width: 12px;
+            border-radius: 6px;
+        }
+        
+        QScrollBar::handle:vertical {
+            background: #2d6cdf;
+            border-radius: 6px;
+            min-height: 30px;
+        }
+        
+        QScrollBar::handle:vertical:hover {
+            background: #3b82f6;
+        }
+        
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0px;
+        }
+    """)
 
 
 def main():
