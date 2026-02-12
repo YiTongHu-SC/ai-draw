@@ -6,7 +6,7 @@ from pathlib import Path
 
 DEFAULT_API_BASE = "https://api.apiyi.com/v1beta"
 DEFAULT_PROVIDER = "google"
-DEFAULT_MODEL = "gemini-2.5-flash-image-hd"
+DEFAULT_MODEL = "gemini-2.5-flash-image"
 DEFAULT_ASPECT = "1:1"
 DEFAULT_FORMAT = "png"
 DEFAULT_RESOLUTION = "1k"

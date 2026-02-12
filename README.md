@@ -67,7 +67,7 @@ pipenv run python main.py "Enhance details" --image input.png --out output.png
 # With custom settings
 pipenv run python main.py "A neon city at night" \
   --provider google \
-  --model gemini-2.5-flash-image-hd \
+  --model gemini-2.5-flash-image \
   --aspect 1:1 \
   --format png \
   --resolution 2k \
@@ -94,7 +94,7 @@ Settings are saved to `~/.ai-draw/config.json`:
   "api_base": "https://api.apiyi.com/v1beta",
   "api_key": "your_api_key",
   "provider": "google",
-  "model": "gemini-2.5-flash-image-hd",
+  "model": "gemini-2.5-flash-image",
   "aspect": "1:1",
   "format": "png",
   "resolution": "1k",
@@ -144,32 +144,6 @@ ai-draw/
 │   ├── progressive-development.md  # Dev roadmap
 │   └── BUILD.md              # Build guide
 └── README.md
-```
-
-## curl request
-
-``` bash
-## banana pro
-curl --location --request POST 'https://api.gptsapi.net/api/v3/google/gemini-3-pro-image-preview/text-to-image' \
-  --header 'Authorization: Bearer YOUR_API_KEY' \
-  --header 'Content-Type: application/json' \
-  --data-raw '{
-    "prompt": "生成一张火烧云图片",
-    "aspect_ratio": "1:1",
-    "output_format": "png"
-  }'
-```
-
-``` bash
-## banana
-curl --location --request POST 'https://api.gptsapi.net/api/v3/google/gemini-2.5-flash-image-hd/text-to-image' \
-  --header 'Authorization: Bearer YOUR_API_KEY' \
-  --header 'Content-Type: application/json' \
-  --data-raw '{
-    "prompt": "生成一张火烧云图片",
-    "aspect_ratio": "1:1",
-    "output_format": "png"
-  }'
 ```
 
 ## Notes

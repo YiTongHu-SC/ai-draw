@@ -81,7 +81,7 @@ pipenv run python main.py "Generate a desert sunset image" --out demo.png
 ```bash
 pipenv run python main.py "A neon city at night" \
 	--provider google \
-	--model gemini-2.5-flash-image-hd \
+	--model gemini-2.5-flash-image \
 	--aspect 1:1 \
 	--format png \
 	--out output.png \
@@ -108,7 +108,7 @@ pipenv run python main.py "保持绘画风格，优化细节" \
 ## 7. 配置与默认值（建议）
 
 - `provider`: google
-- `model`: gemini-2.5-flash-image-hd
+- `model`: gemini-2.5-flash-image
 - `aspect`: 1:1
 - `format`: png
 - `poll-interval`: 2 秒

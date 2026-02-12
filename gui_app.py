@@ -170,7 +170,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.model_box = QtWidgets.QComboBox()
         self.model_box.addItems(
             [
-                "gemini-2.5-flash-image-hd",
+                "gemini-2.5-flash-image",
                 "gemini-3-pro-image-preview",
             ]
         )
